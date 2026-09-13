@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/clothing_item.dart';
+import '../models/outfit.dart';
 
 /// Central place for all backend calls. Every screen talks to the backend
 /// through this class instead of calling http directly, so the base URL,
@@ -149,6 +150,27 @@ class ApiService {
     await deleteAuthed('/api/clothingitem/$id');
   }
 
+  // ---------- Outfits ----------
+
+  static Future<List<Outfit>> getOutfits() async {
+    final data = await getAuthed('/api/outfit');
+    return (data as List).map((json) => Outfit.fromJson(json)).toList();
+  }
+
+  static Future<void> createOutfit({
+    required String name,
+    required List<String> itemIds,
+  }) async {
+    await postAuthed('/api/outfit', {
+      'name': name,
+      'itemIds': itemIds,
+    });
+  }
+
+  static Future<void> deleteOutfit(String id) async {
+    await deleteAuthed('/api/outfit/$id');
+  }
+
   // ---------- AI Suggestions ----------
 
   static Future<List<String>> getOccasionTypes() async {
@@ -202,7 +224,6 @@ class ApiService {
     return (shape: data['bodyShape'] as String, explanation: data['explanation'] as String);
   }
 
-  // Returns null fields if nothing has been calculated yet (404 from backend).
   static Future<String?> getSavedFaceShape() async {
     try {
       final data = await getAuthed('/api/profile/face-shape');
