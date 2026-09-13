@@ -4,6 +4,7 @@ import 'login_screen.dart';
 import 'wardrobe_screen.dart';
 import 'suggestion_screen.dart';
 import 'profile_screen.dart';
+import 'outfits_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -41,6 +42,16 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const WardrobeScreen()),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.style),
+                label: const Text('My Outfits'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const OutfitsScreen()),
                   );
                 },
               ),
