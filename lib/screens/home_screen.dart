@@ -1,17 +1,35 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
 import 'wardrobe_screen.dart';
+import 'outfits_screen.dart';
 import 'suggestion_screen.dart';
 import 'profile_screen.dart';
-import 'outfits_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+// Bottom-nav shell. Each tab keeps its own Scaffold/AppBar (simplest way to
+// reuse the existing screens unchanged) - this outer widget only owns the
+// BottomNavigationBar and swaps which screen is visible.
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  Future<void> _logout(BuildContext context) async {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+
+  static const _screens = [
+    WardrobeScreen(),
+    OutfitsScreen(),
+    SuggestionScreen(),
+    ProfileScreen(),
+  ];
+
+  Future<void> _logout() async {
     await ApiService.clearToken();
-    if (!context.mounted) return;
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
@@ -20,65 +38,29 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('WardrobeIQ'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
-          ),
+      // IndexedStack keeps each screen's state alive when switching tabs,
+      // instead of rebuilding (and re-fetching) every time.
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.checkroom), label: 'Wardrobe'),
+          BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Outfits'),
+          BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Suggest'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ElevatedButton.icon(
-                icon: const Icon(Icons.checkroom),
-                label: const Text('Open My Wardrobe'),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const WardrobeScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.style),
-                label: const Text('My Outfits'),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const OutfitsScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Get AI Outfit Suggestion'),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SuggestionScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.person_outline),
-                label: const Text('My Style Profile'),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+      floatingActionButton: _currentIndex == 3
+          ? FloatingActionButton.small(
+              onPressed: _logout,
+              backgroundColor: AppColors.surface,
+              child: const Icon(Icons.logout, color: AppColors.error),
+            )
+          : null,
     );
   }
 }
