@@ -3,6 +3,7 @@ import '../app_theme.dart';
 import '../services/api_service.dart';
 import 'face_shape_screen.dart';
 import 'body_shape_screen.dart';
+import 'styling_guide_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -39,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const FaceShapeScreen()),
     );
-    _loadSavedShapes(); // refresh in case it was just calculated
+    _loadSavedShapes();
   }
 
   Future<void> _openBodyShape() async {
@@ -47,6 +48,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       MaterialPageRoute(builder: (_) => const BodyShapeScreen()),
     );
     _loadSavedShapes();
+  }
+
+  void _openStylingGuide() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const StylingGuideScreen()),
+    );
   }
 
   @override
@@ -70,6 +77,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Body Shape',
                   value: _bodyShape,
                   onTap: _openBodyShape,
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  color: AppColors.surface,
+                  child: ListTile(
+                    leading: const Icon(Icons.auto_awesome, color: AppColors.aiHighlight),
+                    title: const Text('My Styling Guide'),
+                    subtitle: const Text('Necklines, hairstyles, colors & more'),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    onTap: _openStylingGuide,
+                  ),
                 ),
               ],
             ),
