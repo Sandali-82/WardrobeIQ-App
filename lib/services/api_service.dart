@@ -241,4 +241,25 @@ class ApiService {
       return null;
     }
   }
+
+  // ---------- Styling guide ----------
+
+  static Future<({
+    String necklines,
+    String hairstyles,
+    String sleeves,
+    String silhouettes,
+    String colors,
+    String avoid,
+  })> getStylingGuide() async {
+    final data = await getAuthed('/api/profile/styling-guide');
+    return (
+      necklines: data['necklines'] as String,
+      hairstyles: data['hairstyles'] as String,
+      sleeves: data['sleeves'] as String,
+      silhouettes: data['silhouettes'] as String,
+      colors: data['colors'] as String,
+      avoid: data['avoid'] as String,
+    );
+  }
 }
