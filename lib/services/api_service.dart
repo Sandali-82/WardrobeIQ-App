@@ -5,6 +5,7 @@ import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/clothing_item.dart';
 import '../models/outfit.dart';
+import '../models/worn_log.dart';
 
 /// Central place for all backend calls. Every screen talks to the backend
 /// through this class instead of calling http directly, so the base URL,
@@ -169,6 +170,27 @@ class ApiService {
 
   static Future<void> deleteOutfit(String id) async {
     await deleteAuthed('/api/outfit/$id');
+  }
+
+  // ---------- Worn logs (calendar) ----------
+
+  static String _dateOnly(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  static Future<List<WornLog>> getWornLogs({required DateTime from, required DateTime to}) async {
+    final data = await getAuthed('/api/wornlog?from=${_dateOnly(from)}&to=${_dateOnly(to)}');
+    return (data as List).map((json) => WornLog.fromJson(json)).toList();
+  }
+
+  static Future<void> logWornOutfit({required String outfitId, required DateTime dateWorn}) async {
+    await postAuthed('/api/wornlog', {
+      'outfitId': outfitId,
+      'dateWorn': _dateOnly(dateWorn),
+    });
+  }
+
+  static Future<void> deleteWornLog(String id) async {
+    await deleteAuthed('/api/wornlog/$id');
   }
 
   // ---------- AI Suggestions ----------
