@@ -3,6 +3,7 @@ import '../app_theme.dart';
 import '../services/api_service.dart';
 import 'face_shape_screen.dart';
 import 'body_shape_screen.dart';
+import 'undertone_screen.dart';
 import 'styling_guide_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -15,23 +16,26 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String? _faceShape;
   String? _bodyShape;
+  String? _undertone;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadSavedShapes();
+    _loadSavedFactors();
   }
 
-  Future<void> _loadSavedShapes() async {
+  Future<void> _loadSavedFactors() async {
     final results = await Future.wait([
       ApiService.getSavedFaceShape(),
       ApiService.getSavedBodyShape(),
+      ApiService.getSavedUndertone(),
     ]);
     if (!mounted) return;
     setState(() {
       _faceShape = results[0];
       _bodyShape = results[1];
+      _undertone = results[2];
       _isLoading = false;
     });
   }
@@ -40,14 +44,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const FaceShapeScreen()),
     );
-    _loadSavedShapes();
+    _loadSavedFactors();
   }
 
   Future<void> _openBodyShape() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const BodyShapeScreen()),
     );
-    _loadSavedShapes();
+    _loadSavedFactors();
+  }
+
+  Future<void> _openUndertone() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const UndertoneScreen()),
+    );
+    _loadSavedFactors();
   }
 
   void _openStylingGuide() {
@@ -77,6 +88,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Body Shape',
                   value: _bodyShape,
                   onTap: _openBodyShape,
+                ),
+                const SizedBox(height: 12),
+                _ProfileFactorTile(
+                  icon: Icons.palette,
+                  title: 'Skin Undertone',
+                  value: _undertone,
+                  onTap: _openUndertone,
                 ),
                 const SizedBox(height: 24),
                 Card(

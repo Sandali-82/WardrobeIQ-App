@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -42,39 +43,73 @@ class ApiService {
     };
   }
 
-  // ---------- Auth ----------
-
-  static Future<Map<String, dynamic>> register(
-      String name, String email, String password) async {
-    final client = _createClient();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'name': name, 'email': email, 'password': password}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      await _saveToken(data['token']);
-      return data;
-    } else {
-      throw Exception(data['message'] ?? 'Registration failed');
+  // Wraps a request call so network-level failures (server unreachable,
+  // timeout, DNS failure) surface as one friendly message instead of a raw
+  // exception's toString() leaking into the UI.
+  static Future<T> _runSafely<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } on TimeoutException {
+      throw Exception('The server took too long to respond. Please try again.');
+    } on SocketException {
+      throw Exception('Couldn\'t connect to the server. Check your connection and try again.');
+    } on HttpException {
+      throw Exception('Couldn\'t connect to the server. Check your connection and try again.');
+    } catch (e) {
+      // Already a clean Exception (from _handleResponse or elsewhere) -
+      // pass it through as-is; only wrap truly unexpected error types.
+      if (e is Exception) rethrow;
+      throw Exception('Something went wrong. Please try again.');
     }
   }
 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
-    final client = _createClient();
-    final response = await client.post(
-      Uri.parse('$baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      await _saveToken(data['token']);
+  static dynamic _handleResponse(http.Response response) {
+    dynamic data;
+    try {
+      data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+    } catch (_) {
+      // Body wasn't valid JSON (e.g. a raw server error page) - don't leak
+      // that to the UI, just report a generic failure.
+      throw Exception('Something went wrong. Please try again.');
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return data;
     } else {
-      throw Exception(data['message'] ?? 'Login failed');
+      final message = data is Map ? (data['message'] ?? 'Request failed') : 'Request failed';
+      throw Exception(message);
     }
+  }
+
+  // ---------- Auth ----------
+
+  static Future<Map<String, dynamic>> register(
+      String name, String email, String password) {
+    return _runSafely(() async {
+      final client = _createClient();
+      final response = await client.post(
+        Uri.parse('$baseUrl/api/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'name': name, 'email': email, 'password': password}),
+      );
+      final data = _handleResponse(response);
+      await _saveToken(data['token']);
+      return data;
+    });
+  }
+
+  static Future<Map<String, dynamic>> login(String email, String password) {
+    return _runSafely(() async {
+      final client = _createClient();
+      final response = await client.post(
+        Uri.parse('$baseUrl/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      final data = _handleResponse(response);
+      await _saveToken(data['token']);
+      return data;
+    });
   }
 
   static Future<bool> isLoggedIn() async {
@@ -84,42 +119,38 @@ class ApiService {
 
   // ---------- Generic authenticated request helpers ----------
 
-  static Future<dynamic> getAuthed(String path) async {
-    final client = _createClient();
-    final response = await client.get(
-      Uri.parse('$baseUrl$path'),
-      headers: await _authHeaders(),
-    );
-    return _handleResponse(response);
+  static Future<dynamic> getAuthed(String path) {
+    return _runSafely(() async {
+      final client = _createClient();
+      final response = await client.get(
+        Uri.parse('$baseUrl$path'),
+        headers: await _authHeaders(),
+      );
+      return _handleResponse(response);
+    });
   }
 
-  static Future<dynamic> postAuthed(String path, Map<String, dynamic> body) async {
-    final client = _createClient();
-    final response = await client.post(
-      Uri.parse('$baseUrl$path'),
-      headers: await _authHeaders(),
-      body: jsonEncode(body),
-    );
-    return _handleResponse(response);
+  static Future<dynamic> postAuthed(String path, Map<String, dynamic> body) {
+    return _runSafely(() async {
+      final client = _createClient();
+      final response = await client.post(
+        Uri.parse('$baseUrl$path'),
+        headers: await _authHeaders(),
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response);
+    });
   }
 
-  static Future<dynamic> deleteAuthed(String path) async {
-    final client = _createClient();
-    final response = await client.delete(
-      Uri.parse('$baseUrl$path'),
-      headers: await _authHeaders(),
-    );
-    return _handleResponse(response);
-  }
-
-  static dynamic _handleResponse(http.Response response) {
-    final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return data;
-    } else {
-      final message = data is Map ? (data['message'] ?? 'Request failed') : 'Request failed';
-      throw Exception(message);
-    }
+  static Future<dynamic> deleteAuthed(String path) {
+    return _runSafely(() async {
+      final client = _createClient();
+      final response = await client.delete(
+        Uri.parse('$baseUrl$path'),
+        headers: await _authHeaders(),
+      );
+      return _handleResponse(response);
+    });
   }
 
   // ---------- Clothing items ----------
@@ -259,6 +290,28 @@ class ApiService {
     try {
       final data = await getAuthed('/api/profile/body-shape');
       return data['bodyShape'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---------- Skin undertone ----------
+
+  static Future<({String undertone, String explanation})> analyzeUndertone({
+    required String imageBase64,
+    required String mimeType,
+  }) async {
+    final data = await postAuthed('/api/profile/undertone', {
+      'imageBase64': imageBase64,
+      'mimeType': mimeType,
+    });
+    return (undertone: data['undertone'] as String, explanation: data['explanation'] as String);
+  }
+
+  static Future<String?> getSavedUndertone() async {
+    try {
+      final data = await getAuthed('/api/profile/undertone');
+      return data['skinUndertone'] as String?;
     } catch (_) {
       return null;
     }
