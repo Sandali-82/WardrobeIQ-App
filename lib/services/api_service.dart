@@ -33,6 +33,22 @@ class ApiService {
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+    await prefs.remove('userName');
+    await prefs.remove('userEmail');
+  }
+
+  // Cached locally alongside the token so screens (e.g. Profile Edit) can
+  // pre-fill fields without an extra round trip - kept in sync whenever
+  // login/register/updateProfile succeed.
+  static Future<void> _saveUserInfo(String name, String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userName', name);
+    await prefs.setString('userEmail', email);
+  }
+
+  static Future<({String? name, String? email})> getSavedUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (name: prefs.getString('userName'), email: prefs.getString('userEmail'));
   }
 
   static Future<Map<String, String>> _authHeaders() async {
@@ -43,9 +59,6 @@ class ApiService {
     };
   }
 
-  // Wraps a request call so network-level failures (server unreachable,
-  // timeout, DNS failure) surface as one friendly message instead of a raw
-  // exception's toString() leaking into the UI.
   static Future<T> _runSafely<T>(Future<T> Function() request) async {
     try {
       return await request();
@@ -56,8 +69,6 @@ class ApiService {
     } on HttpException {
       throw Exception('Couldn\'t connect to the server. Check your connection and try again.');
     } catch (e) {
-      // Already a clean Exception (from _handleResponse or elsewhere) -
-      // pass it through as-is; only wrap truly unexpected error types.
       if (e is Exception) rethrow;
       throw Exception('Something went wrong. Please try again.');
     }
@@ -68,8 +79,6 @@ class ApiService {
     try {
       data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
     } catch (_) {
-      // Body wasn't valid JSON (e.g. a raw server error page) - don't leak
-      // that to the UI, just report a generic failure.
       throw Exception('Something went wrong. Please try again.');
     }
 
@@ -94,6 +103,7 @@ class ApiService {
       );
       final data = _handleResponse(response);
       await _saveToken(data['token']);
+      await _saveUserInfo(data['name'], data['email']);
       return data;
     });
   }
@@ -108,6 +118,7 @@ class ApiService {
       );
       final data = _handleResponse(response);
       await _saveToken(data['token']);
+      await _saveUserInfo(data['name'], data['email']);
       return data;
     });
   }
@@ -134,6 +145,30 @@ class ApiService {
     return _runSafely(() async {
       final client = _createClient();
       final response = await client.post(
+        Uri.parse('$baseUrl$path'),
+        headers: await _authHeaders(),
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response);
+    });
+  }
+
+  static Future<dynamic> patchAuthed(String path, Map<String, dynamic> body) {
+    return _runSafely(() async {
+      final client = _createClient();
+      final response = await client.patch(
+        Uri.parse('$baseUrl$path'),
+        headers: await _authHeaders(),
+        body: jsonEncode(body),
+      );
+      return _handleResponse(response);
+    });
+  }
+
+  static Future<dynamic> putAuthed(String path, Map<String, dynamic> body) {
+    return _runSafely(() async {
+      final client = _createClient();
+      final response = await client.put(
         Uri.parse('$baseUrl$path'),
         headers: await _authHeaders(),
         body: jsonEncode(body),
@@ -336,5 +371,30 @@ class ApiService {
       colors: data['colors'] as String,
       avoid: data['avoid'] as String,
     );
+  }
+
+  // ---------- Profile edit (name/email + password) ----------
+
+  static Future<({String name, String email})> updateProfile({
+    String? name,
+    String? email,
+  }) async {
+    final body = <String, dynamic>{};
+    if (name != null && name.isNotEmpty) body['name'] = name;
+    if (email != null && email.isNotEmpty) body['email'] = email;
+
+    final data = await patchAuthed('/api/auth/profile', body);
+    await _saveUserInfo(data['name'], data['email']);
+    return (name: data['name'] as String, email: data['email'] as String);
+  }
+
+  static Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await putAuthed('/api/auth/change-password', {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
   }
 }

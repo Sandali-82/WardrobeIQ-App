@@ -5,6 +5,7 @@ import 'face_shape_screen.dart';
 import 'body_shape_screen.dart';
 import 'undertone_screen.dart';
 import 'styling_guide_screen.dart';
+import 'profile_edit_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -67,6 +68,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openEditProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,6 +83,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                Card(
+                  color: AppColors.surface,
+                  child: ListTile(
+                    leading: const Icon(Icons.manage_accounts, color: AppColors.primary),
+                    title: const Text('Edit Profile'),
+                    subtitle: const Text('Name, email & password'),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    onTap: _openEditProfile,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 _ProfileFactorTile(
                   icon: Icons.face_retouching_natural,
                   title: 'Face Shape',
