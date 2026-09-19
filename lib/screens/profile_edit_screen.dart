@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -27,16 +29,38 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String? _passwordError;
   String? _passwordSuccess;
 
+  bool _outfitReminderEnabled = true;
+
   @override
   void initState() {
     super.initState();
     _loadCurrentInfo();
+    _loadNotificationPref();
   }
 
   Future<void> _loadCurrentInfo() async {
     final info = await ApiService.getSavedUserInfo();
     _nameController.text = info.name ?? '';
     _emailController.text = info.email ?? '';
+  }
+
+  Future<void> _loadNotificationPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _outfitReminderEnabled = prefs.getBool('outfitReminderEnabled') ?? true;
+    });
+  }
+
+  Future<void> _toggleNotificationPref(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('outfitReminderEnabled', value);
+    setState(() => _outfitReminderEnabled = value);
+
+    // Turning reminders off should also clear anything already scheduled,
+    // otherwise previously scheduled reminders would still fire.
+    if (!value) {
+      await NotificationService.cancelAll();
+    }
   }
 
   @override
@@ -99,9 +123,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profile')),
+      appBar: AppBar(title: const Text('Settings')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -211,6 +235,23 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         : const Text('Change Password'),
                   ),
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 36),
+            const Divider(),
+            const SizedBox(height: 20),
+
+            Text('Notifications', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Card(
+              color: AppColors.surface,
+              child: SwitchListTile(
+                title: const Text('Outfit reminders'),
+                subtitle: const Text('Get a reminder for outfits scheduled on your calendar'),
+                value: _outfitReminderEnabled,
+                activeThumbColor: AppColors.primary,
+                onChanged: _toggleNotificationPref,
               ),
             ),
           ],
