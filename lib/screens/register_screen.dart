@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../app_theme.dart';
-import 'home_screen.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -28,15 +28,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      await ApiService.register(
+      final result = await ApiService.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
       );
 
       if (!mounted) return;
+
+      // No token comes back from register anymore - the account exists
+      // but is unconfirmed, so show the backend's message and send them
+      // to Login instead of straight into the app. Tapping the emailed
+      // confirmation link is what actually logs them in (via deep link).
+      final message = (result['message'] as String?) ??
+          'Registration successful. Please check your email to confirm your account.';
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Check your email'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } catch (e) {
       setState(() {
