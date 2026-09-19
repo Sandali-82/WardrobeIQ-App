@@ -101,10 +101,10 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'name': name, 'email': email, 'password': password}),
       );
-      final data = _handleResponse(response);
-      await _saveToken(data['token']);
-      await _saveUserInfo(data['name'], data['email']);
-      return data;
+      // Register no longer returns a token - the account exists but is
+      // unconfirmed, so there's nothing to save yet. The caller just
+      // shows the returned message (e.g. "check your email").
+      return _handleResponse(response) as Map<String, dynamic>;
     });
   }
 
@@ -121,6 +121,25 @@ class ApiService {
       await _saveUserInfo(data['name'], data['email']);
       return data;
     });
+  }
+
+  // Note: email confirmation itself now happens when the user's browser
+  // hits the backend's confirm-email link directly (it returns an HTML
+  // page, not JSON) - the app never calls that endpoint. See
+  // saveSessionFromDeepLink() below for how the app picks up the session
+  // once that page hands off via the wardrobeiq:// deep link.
+
+  // Called by DeepLinkService once the confirm-email browser page hands
+  // off to the app via wardrobeiq://login-success?token=...&name=...&email=...
+  // The confirmation itself already happened server-side (in the browser
+  // tab) - this just saves the token/user info so the app is "logged in".
+  static Future<void> saveSessionFromDeepLink({
+    required String token,
+    required String name,
+    required String email,
+  }) async {
+    await _saveToken(token);
+    await _saveUserInfo(name, email);
   }
 
   static Future<bool> isLoggedIn() async {
