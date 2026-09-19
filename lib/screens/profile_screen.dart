@@ -68,7 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _openEditProfile() {
+  void _openSettings() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ProfileEditScreen()),
     );
@@ -83,17 +83,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Card(
-                  color: AppColors.surface,
-                  child: ListTile(
-                    leading: const Icon(Icons.manage_accounts, color: AppColors.primary),
-                    title: const Text('Edit Profile'),
-                    subtitle: const Text('Name, email & password'),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-                    onTap: _openEditProfile,
-                  ),
-                ),
-                const SizedBox(height: 16),
                 _ProfileFactorTile(
                   icon: Icons.face_retouching_natural,
                   title: 'Face Shape',
@@ -123,6 +112,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     subtitle: const Text('Necklines, hairstyles, colors & more'),
                     trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
                     onTap: _openStylingGuide,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Card(
+                  color: AppColors.surface,
+                  child: ListTile(
+                    leading: const Icon(Icons.settings, color: AppColors.primary),
+                    title: const Text('Settings'),
+                    subtitle: const Text('Name, email, password & notifications'),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    onTap: _openSettings,
                   ),
                 ),
               ],

@@ -5,6 +5,7 @@ import '../models/clothing_item.dart';
 import '../models/outfit.dart';
 import '../models/worn_log.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'outfit_picker_sheet.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -78,6 +79,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     try {
       await ApiService.logWornOutfit(outfitId: selected.id, dateWorn: _selectedDay);
+
+      // Schedule a "wear this today" reminder for the day this outfit was
+      // planned for. NotificationService checks the Settings toggle itself
+      // and silently no-ops if reminders are off or the date is in the past.
+      await NotificationService.scheduleOutfitReminder(
+        date: _selectedDay,
+        outfitName: selected.name,
+      );
+
       _loadMonth(_focusedMonth);
     } catch (e) {
       if (!mounted) return;
@@ -89,6 +99,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _removeLog(WornLog log) async {
     await ApiService.deleteWornLog(log.id);
+    // Clear any reminder scheduled for that date so it doesn't fire for an
+    // outfit that's no longer logged.
+    await NotificationService.cancelReminderForDate(log.dateWorn);
     _loadMonth(_focusedMonth);
   }
 
