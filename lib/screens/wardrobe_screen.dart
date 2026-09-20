@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../app_theme.dart';
 import '../models/clothing_item.dart';
 import '../services/api_service.dart';
+import '../services/cloudinary_service.dart';
 
 class WardrobeScreen extends StatefulWidget {
   const WardrobeScreen({super.key});
@@ -12,6 +15,9 @@ class WardrobeScreen extends StatefulWidget {
 
 class _WardrobeScreenState extends State<WardrobeScreen> {
   late Future<List<ClothingItem>> _itemsFuture;
+
+  String _selectedCategory = 'all';
+  static const _filterCategories = ['all', 'top', 'bottom', 'dress', 'footwear', 'outerwear', 'accessory'];
 
   @override
   void initState() {
@@ -85,47 +91,84 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             );
           }
 
-          final items = snapshot.data ?? [];
+          final allItems = snapshot.data ?? [];
+          final items = _selectedCategory == 'all'
+              ? allItems
+              : allItems.where((i) => i.category == _selectedCategory).toList();
 
-          if (items.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.checkroom, size: 48, color: AppColors.textSecondary),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Your wardrobe is empty.\nTap + to add your first item.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-                    ),
-                  ],
+          return Column(
+            children: [
+              SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  itemCount: _filterCategories.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final cat = _filterCategories[index];
+                    final selected = _selectedCategory == cat;
+                    return ChoiceChip(
+                      label: Text(cat == 'all' ? 'All' : cat),
+                      selected: selected,
+                      onSelected: (_) => setState(() => _selectedCategory = cat),
+                      selectedColor: AppColors.primary,
+                      backgroundColor: AppColors.surface,
+                      labelStyle: TextStyle(
+                        color: selected ? AppColors.background : AppColors.textPrimary,
+                      ),
+                    );
+                  },
                 ),
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.75,
+              Expanded(
+                child: allItems.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.checkroom, size: 48, color: AppColors.textSecondary),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Your wardrobe is empty.\nTap + to add your first item.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : items.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No items in this category.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () async => _refresh(),
+                            child: GridView.builder(
+                              padding: const EdgeInsets.all(16),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 0.75,
+                              ),
+                              itemCount: items.length,
+                              itemBuilder: (context, index) {
+                                final item = items[index];
+                                return _ClothingItemCard(
+                                  item: item,
+                                  onLongPress: () => _confirmDelete(item),
+                                );
+                              },
+                            ),
+                          ),
               ),
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                return _ClothingItemCard(
-                  item: item,
-                  onLongPress: () => _confirmDelete(item),
-                );
-              },
-            ),
+            ],
           );
         },
       ),
@@ -198,7 +241,6 @@ class _AddItemSheet extends StatefulWidget {
 class _AddItemSheetState extends State<_AddItemSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _imageUrlController = TextEditingController();
   final _colorController = TextEditingController();
 
   String _category = 'top';
@@ -206,11 +248,61 @@ class _AddItemSheetState extends State<_AddItemSheet> {
   bool _isSaving = false;
   String? _errorMessage;
 
-  static const _categories = ['top', 'bottom', 'shoes', 'outerwear', 'accessory'];
+  File? _pickedImage;
+  bool _isPickingImage = false;
+
+  static const _categories = ['top', 'bottom', 'dress', 'footwear', 'outerwear', 'accessory'];
   static const _seasons = ['all-season', 'summer', 'winter'];
+
+  Future<void> _pickImage(ImageSource source) async {
+    setState(() => _isPickingImage = true);
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(source: source, imageQuality: 80);
+      if (picked != null) {
+        setState(() => _pickedImage = File(picked.path));
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingImage = false);
+    }
+  }
+
+  void _showImageSourceOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera, color: AppColors.primary),
+              title: const Text('Take a photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppColors.primary),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_pickedImage == null) {
+      setState(() => _errorMessage = 'Please add a photo of the item.');
+      return;
+    }
 
     setState(() {
       _isSaving = true;
@@ -218,9 +310,14 @@ class _AddItemSheetState extends State<_AddItemSheet> {
     });
 
     try {
+      // Upload to Cloudinary first to get a hosted URL, then save the item
+      // with that URL - the backend's ClothingItem model is unchanged,
+      // it just stores whatever URL it's given.
+      final imageUrl = await CloudinaryService.uploadImage(_pickedImage!);
+
       await ApiService.addClothingItem(
         name: _nameController.text.trim(),
-        imageUrl: _imageUrlController.text.trim(),
+        imageUrl: imageUrl,
         category: _category,
         color: _colorController.text.trim(),
         season: _season,
@@ -237,7 +334,6 @@ class _AddItemSheetState extends State<_AddItemSheet> {
   @override
   void dispose() {
     _nameController.dispose();
-    _imageUrlController.dispose();
     _colorController.dispose();
     super.dispose();
   }
@@ -258,17 +354,40 @@ class _AddItemSheetState extends State<_AddItemSheet> {
             Text('Add Clothing Item', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
 
+            GestureDetector(
+              onTap: _isPickingImage ? null : _showImageSourceOptions,
+              child: Container(
+                height: 160,
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.3)),
+                ),
+                child: _isPickingImage
+                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                    : _pickedImage != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(_pickedImage!, fit: BoxFit.cover, width: double.infinity),
+                          )
+                        : const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add_a_photo, color: AppColors.textSecondary, size: 32),
+                                SizedBox(height: 8),
+                                Text('Tap to add a photo', style: TextStyle(color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-            ),
-            const SizedBox(height: 12),
-
-            TextFormField(
-              controller: _imageUrlController,
-              decoration: const InputDecoration(labelText: 'Image URL'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Image URL is required' : null,
             ),
             const SizedBox(height: 12),
 

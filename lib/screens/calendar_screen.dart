@@ -98,6 +98,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _removeLog(WornLog log) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove outfit?'),
+        content: Text('Remove "${log.outfitName}" from this day\'s calendar?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     await ApiService.deleteWornLog(log.id);
     // Clear any reminder scheduled for that date so it doesn't fire for an
     // outfit that's no longer logged.
