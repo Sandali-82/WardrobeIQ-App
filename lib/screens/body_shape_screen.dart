@@ -41,7 +41,7 @@ class _BodyShapeScreenState extends State<BodyShapeScreen> {
     });
 
     try {
-      final result = await ApiService.calculateBodyShape(
+      final result = await ApiService.instance.calculateBodyShape(
         shoulderWidth: double.parse(_shoulderController.text),
         bustWidth: double.parse(_bustController.text),
         waistWidth: double.parse(_waistController.text),

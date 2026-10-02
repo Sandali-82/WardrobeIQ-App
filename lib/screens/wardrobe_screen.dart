@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../app_theme.dart';
 import '../models/clothing_item.dart';
-import '../services/api_service.dart';
+import '../repositories/clothing_repository.dart';
 import '../services/cloudinary_service.dart';
 
 class WardrobeScreen extends StatefulWidget {
@@ -22,12 +22,12 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   @override
   void initState() {
     super.initState();
-    _itemsFuture = ApiService.getClothingItems();
+    _itemsFuture = ClothingRepository.instance.getAll();
   }
 
   void _refresh() {
     setState(() {
-      _itemsFuture = ApiService.getClothingItems();
+      _itemsFuture = ClothingRepository.instance.getAll();
     });
   }
 
@@ -48,7 +48,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     );
 
     if (confirmed == true) {
-      await ApiService.deleteClothingItem(item.id);
+      await ClothingRepository.instance.delete(item.id);
       _refresh();
     }
   }
@@ -315,7 +315,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
       // it just stores whatever URL it's given.
       final imageUrl = await CloudinaryService.uploadImage(_pickedImage!);
 
-      await ApiService.addClothingItem(
+      await ClothingRepository.instance.add(
         name: _nameController.text.trim(),
         imageUrl: imageUrl,
         category: _category,

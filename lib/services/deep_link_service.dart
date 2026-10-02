@@ -54,7 +54,7 @@ class DeepLinkService {
     // The confirm-email page (hit by the browser) already confirmed the
     // account server-side and minted this JWT - we just need to store it
     // locally so the app treats itself as logged in.
-    await ApiService.saveSessionFromDeepLink(token: token, name: name, email: email);
+    await ApiService.instance.saveSessionFromDeepLink(token: token, name: name, email: email);
 
     navigator.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const HomeScreen()),

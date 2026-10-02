@@ -28,7 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      final result = await ApiService.register(
+      final result = await ApiService.instance.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,

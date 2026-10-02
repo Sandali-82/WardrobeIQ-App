@@ -26,7 +26,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
   @override
   void initState() {
     super.initState();
-    _occasionTypesFuture = ApiService.getOccasionTypes();
+    _occasionTypesFuture = ApiService.instance.getOccasionTypes();
   }
 
   @override
@@ -52,11 +52,11 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
       // Fetch both in parallel - the suggestion gives us ids, the wardrobe
       // list lets us show the actual item names/images for those ids.
       final results = await Future.wait([
-        ApiService.getSuggestion(
+        ApiService.instance.getSuggestion(
           occasion: _selectedOccasion!,
           notes: _notesController.text.trim(),
         ),
-        ApiService.getClothingItems(),
+        ApiService.instance.getClothingItems(),
       ]);
 
       final suggestion = results[0] as ({List<String> itemIds, String explanation});

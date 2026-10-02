@@ -21,7 +21,7 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
   @override
   void initState() {
     super.initState();
-    _itemsFuture = ApiService.getClothingItems();
+    _itemsFuture = ApiService.instance.getClothingItems();
   }
 
   @override
@@ -56,7 +56,7 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
     });
 
     try {
-      await ApiService.createOutfit(
+      await ApiService.instance.createOutfit(
         name: _nameController.text.trim(),
         itemIds: _selectedIds.toList(),
       );

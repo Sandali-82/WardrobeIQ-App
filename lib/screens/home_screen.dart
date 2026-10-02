@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   Future<void> _logout() async {
-    await ApiService.clearToken();
+    await ApiService.instance.clearToken();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
