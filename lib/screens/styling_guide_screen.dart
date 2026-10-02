@@ -24,7 +24,7 @@ class _StylingGuideScreenState extends State<StylingGuideScreen> {
   void _loadGuide() {
     setState(() {
       _hasRequested = true;
-      _guideFuture = ApiService.getStylingGuide();
+      _guideFuture = ApiService.instance.getStylingGuide();
     });
   }
 

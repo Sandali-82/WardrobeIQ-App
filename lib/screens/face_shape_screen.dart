@@ -41,7 +41,7 @@ class _FaceShapeScreenState extends State<FaceShapeScreen> {
     });
 
     try {
-      final result = await ApiService.calculateFaceShape(
+      final result = await ApiService.instance.calculateFaceShape(
         foreheadWidth: double.parse(_foreheadController.text),
         cheekboneWidth: double.parse(_cheekboneController.text),
         jawlineWidth: double.parse(_jawlineController.text),

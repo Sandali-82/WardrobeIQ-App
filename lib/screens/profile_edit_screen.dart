@@ -39,7 +39,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _loadCurrentInfo() async {
-    final info = await ApiService.getSavedUserInfo();
+    final info = await ApiService.instance.getSavedUserInfo();
     _nameController.text = info.name ?? '';
     _emailController.text = info.email ?? '';
   }
@@ -83,7 +83,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     });
 
     try {
-      await ApiService.updateProfile(
+      await ApiService.instance.updateProfile(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
       );
@@ -105,7 +105,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     });
 
     try {
-      await ApiService.changePassword(
+      await ApiService.instance.changePassword(
         currentPassword: _currentPasswordController.text,
         newPassword: _newPasswordController.text,
       );

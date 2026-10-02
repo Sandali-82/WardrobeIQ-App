@@ -40,7 +40,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final firstDay = DateTime(month.year, month.month, 1);
       final lastDay = DateTime(month.year, month.month + 1, 0);
-      final logs = await ApiService.getWornLogs(from: firstDay, to: lastDay);
+      final logs = await ApiService.instance.getWornLogs(from: firstDay, to: lastDay);
 
       setState(() {
         _logsByDate = {for (final log in logs) _key(log.dateWorn): log};
@@ -55,7 +55,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   WornLog? get _selectedLog => _logsByDate[_key(_selectedDay)];
 
   Future<void> _assignOutfit() async {
-    final outfits = await ApiService.getOutfits();
+    final outfits = await ApiService.instance.getOutfits();
     if (!mounted) return;
 
     if (outfits.isEmpty) {
@@ -78,7 +78,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (selected == null) return;
 
     try {
-      await ApiService.logWornOutfit(outfitId: selected.id, dateWorn: _selectedDay);
+      await ApiService.instance.logWornOutfit(outfitId: selected.id, dateWorn: _selectedDay);
 
       // Schedule a "wear this today" reminder for the day this outfit was
       // planned for. NotificationService checks the Settings toggle itself
@@ -115,7 +115,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (confirmed != true) return;
 
-    await ApiService.deleteWornLog(log.id);
+    await ApiService.instance.deleteWornLog(log.id);
     // Clear any reminder scheduled for that date so it doesn't fire for an
     // outfit that's no longer logged.
     await NotificationService.cancelReminderForDate(log.dateWorn);
@@ -265,7 +265,7 @@ class _LoggedOutfitCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           FutureBuilder<List<ClothingItem>>(
-            future: ApiService.getClothingItems(),
+            future: ApiService.instance.getClothingItems(),
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const SizedBox(
@@ -349,7 +349,7 @@ class _LoggedOutfitCard extends StatelessWidget {
   }
 
   Future<Outfit?> _findOutfit(String outfitId) async {
-    final outfits = await ApiService.getOutfits();
+    final outfits = await ApiService.instance.getOutfits();
     try {
       return outfits.firstWhere((o) => o.id == outfitId);
     } catch (_) {

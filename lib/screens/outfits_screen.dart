@@ -18,12 +18,12 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
   @override
   void initState() {
     super.initState();
-    _outfitsFuture = ApiService.getOutfits();
+    _outfitsFuture = ApiService.instance.getOutfits();
   }
 
   void _refresh() {
     setState(() {
-      _outfitsFuture = ApiService.getOutfits();
+      _outfitsFuture = ApiService.instance.getOutfits();
     });
   }
 
@@ -50,7 +50,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       ),
     );
     if (confirmed == true) {
-      await ApiService.deleteOutfit(outfit.id);
+      await ApiService.instance.deleteOutfit(outfit.id);
       _refresh();
     }
   }
@@ -152,7 +152,7 @@ class _OutfitDetailSheet extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: FutureBuilder<List<ClothingItem>>(
-        future: ApiService.getClothingItems(),
+        future: ApiService.instance.getClothingItems(),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const SizedBox(

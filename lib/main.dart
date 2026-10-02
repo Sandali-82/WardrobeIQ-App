@@ -56,7 +56,7 @@ class _StartupRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(
-      future: ApiService.isLoggedIn(),
+      future: ApiService.instance.isLoggedIn(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Scaffold(

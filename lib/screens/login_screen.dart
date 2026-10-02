@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../repositories/auth_repository.dart';
 import '../app_theme.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await ApiService.login(_emailController.text.trim(), _passwordController.text);
+      await AuthRepository.instance.login(_emailController.text.trim(), _passwordController.text);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(

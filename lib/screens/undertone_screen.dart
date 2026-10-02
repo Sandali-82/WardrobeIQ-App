@@ -85,7 +85,7 @@ class _UndertoneScreenState extends State<UndertoneScreen> {
           ? 'image/png'
           : 'image/jpeg';
 
-      final result = await ApiService.analyzeUndertone(
+      final result = await ApiService.instance.analyzeUndertone(
         imageBase64: base64Image,
         mimeType: mimeType,
       );

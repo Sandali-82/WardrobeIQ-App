@@ -28,9 +28,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadSavedFactors() async {
     final results = await Future.wait([
-      ApiService.getSavedFaceShape(),
-      ApiService.getSavedBodyShape(),
-      ApiService.getSavedUndertone(),
+      ApiService.instance.getSavedFaceShape(),
+      ApiService.instance.getSavedBodyShape(),
+      ApiService.instance.getSavedUndertone(),
     ]);
     if (!mounted) return;
     setState(() {
