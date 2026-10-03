@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../app_theme.dart';
 import '../models/clothing_item.dart';
 import '../repositories/clothing_repository.dart';
-import '../services/cloudinary_service.dart';
+import '../services/image_uploader.dart';
+import '../services/photo_picker.dart';
 
 class WardrobeScreen extends StatefulWidget {
   const WardrobeScreen({super.key});
@@ -71,7 +70,9 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('My Wardrobe')),
-        floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton(
+        // Several tabs on the home screen have their own FAB. A null hero tag
+        // avoids duplicate-tag errors during route changes.
         heroTag: null,
         onPressed: _openAddItemSheet,
         child: const Icon(Icons.add),
@@ -249,19 +250,22 @@ class _AddItemSheetState extends State<_AddItemSheet> {
   bool _isSaving = false;
   String? _errorMessage;
 
-  File? _pickedImage;
+  PickedPhoto? _pickedPhoto;
   bool _isPickingImage = false;
 
   static const _categories = ['top', 'bottom', 'dress', 'footwear', 'outerwear', 'accessory'];
   static const _seasons = ['all-season', 'summer', 'winter'];
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<void> _pickImage(PhotoSource source) async {
     setState(() => _isPickingImage = true);
     try {
-      final picker = ImagePicker();
-      final picked = await picker.pickImage(source: source, imageQuality: 80);
-      if (picked != null) {
-        setState(() => _pickedImage = File(picked.path));
+      final picked = await PhotoPicker.instance.pick(
+        source,
+        maxWidth: null, // keep the original size, only compress
+        imageQuality: 80,
+      );
+      if (picked != null && mounted) {
+        setState(() => _pickedPhoto = picked);
       }
     } finally {
       if (mounted) setState(() => _isPickingImage = false);
@@ -280,7 +284,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
               title: const Text('Take a photo'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.camera);
+                _pickImage(PhotoSource.camera);
               },
             ),
             ListTile(
@@ -288,7 +292,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
               title: const Text('Choose from gallery'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
+                _pickImage(PhotoSource.gallery);
               },
             ),
           ],
@@ -300,7 +304,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_pickedImage == null) {
+    if (_pickedPhoto == null) {
       setState(() => _errorMessage = 'Please add a photo of the item.');
       return;
     }
@@ -314,7 +318,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
       // Upload to Cloudinary first to get a hosted URL, then save the item
       // with that URL - the backend's ClothingItem model is unchanged,
       // it just stores whatever URL it's given.
-      final imageUrl = await CloudinaryService.uploadImage(_pickedImage!);
+      final imageUrl = await ImageUploader.instance.upload(_pickedPhoto!);
 
       await ClothingRepository.instance.add(
         name: _nameController.text.trim(),
@@ -366,10 +370,17 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                 ),
                 child: _isPickingImage
                     ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                    : _pickedImage != null
+                    : _pickedPhoto != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.file(_pickedImage!, fit: BoxFit.cover, width: double.infinity),
+                            child: Image.memory(
+                              _pickedPhoto!.bytes,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              errorBuilder: (_, _, _) => const Center(
+                                child: Icon(Icons.image_not_supported, color: AppColors.textSecondary),
+                              ),
+                            ),
                           )
                         : const Center(
                             child: Column(
