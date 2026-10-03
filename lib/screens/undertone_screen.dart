@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../app_theme.dart';
-import '../services/api_service.dart';
+import '../repositories/profile_repository.dart';
+import '../services/photo_picker.dart';
 
 class UndertoneScreen extends StatefulWidget {
   const UndertoneScreen({super.key});
@@ -13,24 +12,18 @@ class UndertoneScreen extends StatefulWidget {
 }
 
 class _UndertoneScreenState extends State<UndertoneScreen> {
-  final _picker = ImagePicker();
-
-  File? _selectedImage;
+  PickedPhoto? _photo;
   bool _isAnalyzing = false;
   String? _errorMessage;
   String? _resultUndertone;
   String? _resultExplanation;
 
-  Future<void> _pickImage(ImageSource source) async {
-    final picked = await _picker.pickImage(
-      source: source,
-      maxWidth: 1024, // downscale before base64-encoding - keeps the request small
-      imageQuality: 85,
-    );
-    if (picked == null) return;
+  Future<void> _pickImage(PhotoSource source) async {
+    final picked = await PhotoPicker.instance.pick(source);
+    if (picked == null || !mounted) return;
 
     setState(() {
-      _selectedImage = File(picked.path);
+      _photo = picked;
       _resultUndertone = null;
       _resultExplanation = null;
       _errorMessage = null;
@@ -53,7 +46,7 @@ class _UndertoneScreenState extends State<UndertoneScreen> {
               title: const Text('Take a photo'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.camera);
+                _pickImage(PhotoSource.camera);
               },
             ),
             ListTile(
@@ -61,7 +54,7 @@ class _UndertoneScreenState extends State<UndertoneScreen> {
               title: const Text('Choose from gallery'),
               onTap: () {
                 Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
+                _pickImage(PhotoSource.gallery);
               },
             ),
           ],
@@ -71,7 +64,8 @@ class _UndertoneScreenState extends State<UndertoneScreen> {
   }
 
   Future<void> _analyze() async {
-    if (_selectedImage == null) return;
+    final photo = _photo;
+    if (photo == null) return;
 
     setState(() {
       _isAnalyzing = true;
@@ -79,15 +73,9 @@ class _UndertoneScreenState extends State<UndertoneScreen> {
     });
 
     try {
-      final bytes = await _selectedImage!.readAsBytes();
-      final base64Image = base64Encode(bytes);
-      final mimeType = _selectedImage!.path.toLowerCase().endsWith('.png')
-          ? 'image/png'
-          : 'image/jpeg';
-
-      final result = await ApiService.instance.analyzeUndertone(
-        imageBase64: base64Image,
-        mimeType: mimeType,
+      final result = await ProfileRepository.instance.analyzeUndertone(
+        imageBase64: base64Encode(photo.bytes),
+        mimeType: photo.mimeType,
       );
 
       setState(() {
@@ -126,10 +114,17 @@ class _UndertoneScreenState extends State<UndertoneScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.3)),
                 ),
-                child: _selectedImage != null
+                child: _photo != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity),
+                        child: Image.memory(
+                          _photo!.bytes,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, _, _) => const Center(
+                            child: Icon(Icons.image_not_supported, color: AppColors.textSecondary),
+                          ),
+                        ),
                       )
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -153,7 +148,7 @@ class _UndertoneScreenState extends State<UndertoneScreen> {
               ),
 
             ElevatedButton(
-              onPressed: _selectedImage == null || _isAnalyzing ? null : _analyze,
+              onPressed: _photo == null || _isAnalyzing ? null : _analyze,
               child: _isAnalyzing
                   ? const SizedBox(
                       height: 20, width: 20,

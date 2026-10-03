@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
-import '../services/api_service.dart';
+import '../repositories/profile_repository.dart';
 import 'face_shape_screen.dart';
 import 'body_shape_screen.dart';
 import 'undertone_screen.dart';
@@ -28,9 +28,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadSavedFactors() async {
     final results = await Future.wait([
-      ApiService.instance.getSavedFaceShape(),
-      ApiService.instance.getSavedBodyShape(),
-      ApiService.instance.getSavedUndertone(),
+      ProfileRepository.instance.getSavedFaceShape(),
+      ProfileRepository.instance.getSavedBodyShape(),
+      ProfileRepository.instance.getSavedUndertone(),
     ]);
     if (!mounted) return;
     setState(() {

@@ -4,8 +4,10 @@ import '../app_theme.dart';
 import '../models/clothing_item.dart';
 import '../models/outfit.dart';
 import '../models/worn_log.dart';
-import '../services/api_service.dart';
-import '../services/notification_service.dart';
+import '../repositories/clothing_repository.dart';
+import '../repositories/outfit_repository.dart';
+import '../repositories/worn_log_repository.dart';
+import '../services/reminder_service.dart';
 import 'outfit_picker_sheet.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -40,7 +42,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final firstDay = DateTime(month.year, month.month, 1);
       final lastDay = DateTime(month.year, month.month + 1, 0);
-      final logs = await ApiService.instance.getWornLogs(from: firstDay, to: lastDay);
+      final logs = await WornLogRepository.instance.getRange(from: firstDay, to: lastDay);
 
       setState(() {
         _logsByDate = {for (final log in logs) _key(log.dateWorn): log};
@@ -55,7 +57,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   WornLog? get _selectedLog => _logsByDate[_key(_selectedDay)];
 
   Future<void> _assignOutfit() async {
-    final outfits = await ApiService.instance.getOutfits();
+    final outfits = await OutfitRepository.instance.getAll();
     if (!mounted) return;
 
     if (outfits.isEmpty) {
@@ -78,12 +80,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (selected == null) return;
 
     try {
-      await ApiService.instance.logWornOutfit(outfitId: selected.id, dateWorn: _selectedDay);
+      await WornLogRepository.instance.log(outfitId: selected.id, dateWorn: _selectedDay);
 
       // Schedule a "wear this today" reminder for the day this outfit was
-      // planned for. NotificationService checks the Settings toggle itself
+      // planned for. The reminder service checks the Settings toggle itself
       // and silently no-ops if reminders are off or the date is in the past.
-      await NotificationService.scheduleOutfitReminder(
+      await ReminderService.instance.scheduleOutfitReminder(
         date: _selectedDay,
         outfitName: selected.name,
       );
@@ -104,7 +106,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         title: const Text('Remove outfit?'),
         content: Text('Remove "${log.outfitName}" from this day\'s calendar?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Remove', style: TextStyle(color: AppColors.error)),
@@ -115,10 +120,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (confirmed != true) return;
 
-    await ApiService.instance.deleteWornLog(log.id);
+    await WornLogRepository.instance.delete(log.id);
     // Clear any reminder scheduled for that date so it doesn't fire for an
     // outfit that's no longer logged.
-    await NotificationService.cancelReminderForDate(log.dateWorn);
+    await ReminderService.instance.cancelReminderForDate(log.dateWorn);
     _loadMonth(_focusedMonth);
   }
 
@@ -167,7 +172,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _errorMessage != null
-                    ? Center(child: Text(_errorMessage!, style: const TextStyle(color: AppColors.error)))
+                    ? Center(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: AppColors.error),
+                        ),
+                      )
                     : Padding(
                         padding: const EdgeInsets.all(20),
                         child: _selectedLog != null
@@ -180,11 +190,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.event_note, size: 40, color: AppColors.textSecondary),
+                                    const Icon(Icons.event_note,
+                                        size: 40, color: AppColors.textSecondary),
                                     const SizedBox(height: 12),
                                     Text(
                                       'No outfit logged for this day.',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(color: AppColors.textSecondary),
                                     ),
                                     const SizedBox(height: 16),
                                     ElevatedButton(
@@ -252,7 +266,13 @@ class _LoggedOutfitCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_label(), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                    Text(
+                      _label(),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
+                    ),
                     Text(log.outfitName, style: Theme.of(context).textTheme.titleMedium),
                   ],
                 ),
@@ -265,7 +285,7 @@ class _LoggedOutfitCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           FutureBuilder<List<ClothingItem>>(
-            future: ApiService.instance.getClothingItems(),
+            future: ClothingRepository.instance.getAll(),
             builder: (context, snapshot) {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const SizedBox(
@@ -329,10 +349,12 @@ class _LoggedOutfitCard extends StatelessWidget {
                                       item.imageUrl,
                                       fit: BoxFit.cover,
                                       errorBuilder: (_, _, _) => const Icon(
-                                          Icons.image_not_supported,
-                                          color: AppColors.textSecondary),
+                                        Icons.image_not_supported,
+                                        color: AppColors.textSecondary,
+                                      ),
                                     )
-                                  : const Icon(Icons.checkroom, color: AppColors.textSecondary),
+                                  : const Icon(Icons.checkroom,
+                                      color: AppColors.textSecondary),
                             ),
                           ),
                         );
@@ -349,7 +371,7 @@ class _LoggedOutfitCard extends StatelessWidget {
   }
 
   Future<Outfit?> _findOutfit(String outfitId) async {
-    final outfits = await ApiService.instance.getOutfits();
+    final outfits = await OutfitRepository.instance.getAll();
     try {
       return outfits.firstWhere((o) => o.id == outfitId);
     } catch (_) {

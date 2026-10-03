@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
-import '../services/api_service.dart';
+import '../repositories/profile_repository.dart';
 
 class FaceShapeScreen extends StatefulWidget {
   const FaceShapeScreen({super.key});
@@ -41,7 +41,7 @@ class _FaceShapeScreenState extends State<FaceShapeScreen> {
     });
 
     try {
-      final result = await ApiService.instance.calculateFaceShape(
+      final result = await ProfileRepository.instance.calculateFaceShape(
         foreheadWidth: double.parse(_foreheadController.text),
         cheekboneWidth: double.parse(_cheekboneController.text),
         jawlineWidth: double.parse(_jawlineController.text),

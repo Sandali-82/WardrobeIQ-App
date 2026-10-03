@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../models/clothing_item.dart';
-import '../services/api_service.dart';
+import '../repositories/clothing_repository.dart';
+import '../repositories/outfit_repository.dart';
 
 class OutfitBuilderScreen extends StatefulWidget {
   const OutfitBuilderScreen({super.key});
@@ -21,7 +22,7 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
   @override
   void initState() {
     super.initState();
-    _itemsFuture = ApiService.instance.getClothingItems();
+    _itemsFuture = ClothingRepository.instance.getAll();
   }
 
   @override
@@ -56,7 +57,7 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
     });
 
     try {
-      await ApiService.instance.createOutfit(
+      await OutfitRepository.instance.create(
         name: _nameController.text.trim(),
         itemIds: _selectedIds.toList(),
       );
@@ -88,7 +89,10 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 '${_selectedIds.length} item(s) selected — tap items below to select',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.textSecondary),
               ),
             ),
           ),
@@ -146,7 +150,10 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: AppColors.error, fontSize: 13),
+              ),
             ),
 
           Padding(
@@ -155,8 +162,12 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
               onPressed: _isSaving ? null : _saveOutfit,
               child: _isSaving
                   ? const SizedBox(
-                      height: 20, width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.background,
+                      ),
                     )
                   : const Text('Save Outfit'),
             ),
@@ -204,10 +215,13 @@ class _SelectableItemCard extends StatelessWidget {
                           ? Image.network(
                               item.imageUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) =>
-                                  const Icon(Icons.image_not_supported, color: AppColors.textSecondary),
+                              errorBuilder: (_, _, _) => const Icon(
+                                Icons.image_not_supported,
+                                color: AppColors.textSecondary,
+                              ),
                             )
-                          : const Icon(Icons.checkroom, color: AppColors.textSecondary),
+                          : const Icon(Icons.checkroom,
+                              color: AppColors.textSecondary),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(4),
@@ -224,8 +238,10 @@ class _SelectableItemCard extends StatelessWidget {
             ),
             if (isSelected)
               const Positioned(
-                top: 4, right: 4,
-                child: Icon(Icons.check_circle, color: AppColors.primary, size: 20),
+                top: 4,
+                right: 4,
+                child: Icon(Icons.check_circle,
+                    color: AppColors.primary, size: 20),
               ),
           ],
         ),
