@@ -6,27 +6,45 @@ enum PhotoSource { camera, gallery }
 class PickedPhoto {
   final Uint8List bytes;
   final String mimeType;
-  const PickedPhoto({required this.bytes, required this.mimeType});
+
+  /// The file path of the picked image. Only needed by code that has to hand
+  /// a real file to another API (for example the Cloudinary upload).
+  final String path;
+
+  const PickedPhoto({
+    required this.bytes,
+    required this.mimeType,
+    this.path = '',
+  });
 }
 
 abstract class PhotoPicker {
   static PhotoPicker instance = _PhotoPickerImpl();
 
-  /// Returns null when the user cancels.
-  Future<PickedPhoto?> pick(PhotoSource source);
+  /// Returns null when the user cancels. Pass `maxWidth: null` to keep the
+  /// original image size.
+  Future<PickedPhoto?> pick(
+    PhotoSource source, {
+    int? maxWidth = 1024,
+    int imageQuality = 85,
+  });
 }
 
 class _PhotoPickerImpl implements PhotoPicker {
   final _picker = ImagePicker();
 
   @override
-  Future<PickedPhoto?> pick(PhotoSource source) async {
+  Future<PickedPhoto?> pick(
+    PhotoSource source, {
+    int? maxWidth = 1024,
+    int imageQuality = 85,
+  }) async {
     final picked = await _picker.pickImage(
       source: source == PhotoSource.camera
           ? ImageSource.camera
           : ImageSource.gallery,
-      maxWidth: 1024, // downscale before base64-encoding - keeps the request small
-      imageQuality: 85,
+      maxWidth: maxWidth?.toDouble(), // downscale before encoding - keeps requests small
+      imageQuality: imageQuality,
     );
     if (picked == null) return null;
 
@@ -34,6 +52,6 @@ class _PhotoPickerImpl implements PhotoPicker {
     final mimeType = picked.path.toLowerCase().endsWith('.png')
         ? 'image/png'
         : 'image/jpeg';
-    return PickedPhoto(bytes: bytes, mimeType: mimeType);
+    return PickedPhoto(bytes: bytes, mimeType: mimeType, path: picked.path);
   }
 }
