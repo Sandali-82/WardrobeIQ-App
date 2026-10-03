@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
-import '../services/api_service.dart';
+import '../repositories/profile_repository.dart';
+import '../services/api_service.dart' show StylingGuide;
 
 class StylingGuideScreen extends StatefulWidget {
   const StylingGuideScreen({super.key});
@@ -10,21 +11,14 @@ class StylingGuideScreen extends StatefulWidget {
 }
 
 class _StylingGuideScreenState extends State<StylingGuideScreen> {
-  Future<({
-    String necklines,
-    String hairstyles,
-    String sleeves,
-    String silhouettes,
-    String colors,
-    String avoid,
-  })>? _guideFuture;
+  Future<StylingGuide>? _guideFuture;
 
   bool _hasRequested = false;
 
   void _loadGuide() {
     setState(() {
       _hasRequested = true;
-      _guideFuture = ApiService.instance.getStylingGuide();
+      _guideFuture = ProfileRepository.instance.getStylingGuide();
     });
   }
 
@@ -36,7 +30,7 @@ class _StylingGuideScreenState extends State<StylingGuideScreen> {
         padding: const EdgeInsets.all(20),
         child: !_hasRequested
             ? _IntroState(onGenerate: _loadGuide)
-            : FutureBuilder(
+            : FutureBuilder<StylingGuide>(
                 future: _guideFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {

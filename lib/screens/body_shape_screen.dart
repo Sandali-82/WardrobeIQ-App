@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
-import '../services/api_service.dart';
+import '../repositories/profile_repository.dart';
 
 class BodyShapeScreen extends StatefulWidget {
   const BodyShapeScreen({super.key});
@@ -41,7 +41,7 @@ class _BodyShapeScreenState extends State<BodyShapeScreen> {
     });
 
     try {
-      final result = await ApiService.instance.calculateBodyShape(
+      final result = await ProfileRepository.instance.calculateBodyShape(
         shoulderWidth: double.parse(_shoulderController.text),
         bustWidth: double.parse(_bustController.text),
         waistWidth: double.parse(_waistController.text),

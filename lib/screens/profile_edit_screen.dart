@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
-import '../services/api_service.dart';
-import '../services/notification_service.dart';
+import '../repositories/profile_repository.dart';
+import '../services/reminder_service.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -39,7 +39,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _loadCurrentInfo() async {
-    final info = await ApiService.instance.getSavedUserInfo();
+    final info = await ProfileRepository.instance.getSavedUserInfo();
     _nameController.text = info.name ?? '';
     _emailController.text = info.email ?? '';
   }
@@ -59,7 +59,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     // Turning reminders off should also clear anything already scheduled,
     // otherwise previously scheduled reminders would still fire.
     if (!value) {
-      await NotificationService.cancelAll();
+      await ReminderService.instance.cancelAll();
     }
   }
 
@@ -83,7 +83,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     });
 
     try {
-      await ApiService.instance.updateProfile(
+      await ProfileRepository.instance.updateProfile(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
       );
@@ -105,7 +105,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     });
 
     try {
-      await ApiService.instance.changePassword(
+      await ProfileRepository.instance.changePassword(
         currentPassword: _currentPasswordController.text,
         newPassword: _newPasswordController.text,
       );

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../models/clothing_item.dart';
 import '../models/outfit.dart';
-import '../services/api_service.dart';
+import '../repositories/clothing_repository.dart';
+import '../repositories/outfit_repository.dart';
 import 'outfit_builder_screen.dart';
 
 class OutfitsScreen extends StatefulWidget {
@@ -18,12 +19,12 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
   @override
   void initState() {
     super.initState();
-    _outfitsFuture = ApiService.instance.getOutfits();
+    _outfitsFuture = OutfitRepository.instance.getAll();
   }
 
   void _refresh() {
     setState(() {
-      _outfitsFuture = ApiService.instance.getOutfits();
+      _outfitsFuture = OutfitRepository.instance.getAll();
     });
   }
 
@@ -41,7 +42,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
         title: const Text('Delete outfit?'),
         content: Text('Remove "${outfit.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete', style: TextStyle(color: AppColors.error)),
@@ -50,7 +54,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       ),
     );
     if (confirmed == true) {
-      await ApiService.instance.deleteOutfit(outfit.id);
+      await OutfitRepository.instance.delete(outfit.id);
       _refresh();
     }
   }
@@ -106,7 +110,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                     Text(
                       'No outfits yet.\nTap + to build your first one.',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -152,7 +159,7 @@ class _OutfitDetailSheet extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: FutureBuilder<List<ClothingItem>>(
-        future: ApiService.instance.getClothingItems(),
+        future: ClothingRepository.instance.getAll(),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const SizedBox(
@@ -205,10 +212,12 @@ class _OutfitDetailSheet extends StatelessWidget {
                                           item.imageUrl,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, _, _) => const Icon(
-                                              Icons.image_not_supported,
-                                              color: AppColors.textSecondary),
+                                            Icons.image_not_supported,
+                                            color: AppColors.textSecondary,
+                                          ),
                                         )
-                                      : const Icon(Icons.checkroom, color: AppColors.textSecondary),
+                                      : const Icon(Icons.checkroom,
+                                          color: AppColors.textSecondary),
                                 ),
                               ),
                             ),
