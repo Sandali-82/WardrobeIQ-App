@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
-import '../services/api_service.dart';
+import '../repositories/auth_repository.dart';
 import 'login_screen.dart';
 import 'wardrobe_screen.dart';
 import 'outfits_screen.dart';
@@ -27,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   Future<void> _logout() async {
-    await ApiService.instance.clearToken();
+    await AuthRepository.instance.logout();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -55,6 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: _currentIndex == 4
           ? FloatingActionButton.small(
+              // Several tabs below this screen have their own FAB. A null
+              // hero tag avoids duplicate-tag errors during route changes.
+              heroTag: null,
               onPressed: _logout,
               backgroundColor: AppColors.surface,
               child: const Icon(Icons.logout, color: AppColors.error),

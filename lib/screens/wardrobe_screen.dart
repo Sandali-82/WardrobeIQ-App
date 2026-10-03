@@ -71,7 +71,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('My Wardrobe')),
-      floatingActionButton: FloatingActionButton(
+        floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: _openAddItemSheet,
         child: const Icon(Icons.add),
       ),

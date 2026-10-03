@@ -78,7 +78,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('My Outfits')),
-      floatingActionButton: FloatingActionButton(
+        floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: _openBuilder,
         child: const Icon(Icons.add),
       ),

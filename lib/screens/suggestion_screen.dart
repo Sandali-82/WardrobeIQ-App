@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../models/clothing_item.dart';
-import '../services/api_service.dart';
+import '../repositories/clothing_repository.dart';
+import '../repositories/suggestion_repository.dart';
+import '../services/api_service.dart' show SuggestionResult;
 
 class SuggestionScreen extends StatefulWidget {
   const SuggestionScreen({super.key});
@@ -26,7 +28,7 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
   @override
   void initState() {
     super.initState();
-    _occasionTypesFuture = ApiService.instance.getOccasionTypes();
+    _occasionTypesFuture = SuggestionRepository.instance.getOccasionTypes();
   }
 
   @override
@@ -52,14 +54,14 @@ class _SuggestionScreenState extends State<SuggestionScreen> {
       // Fetch both in parallel - the suggestion gives us ids, the wardrobe
       // list lets us show the actual item names/images for those ids.
       final results = await Future.wait([
-        ApiService.instance.getSuggestion(
+        SuggestionRepository.instance.getSuggestion(
           occasion: _selectedOccasion!,
           notes: _notesController.text.trim(),
         ),
-        ApiService.instance.getClothingItems(),
+        ClothingRepository.instance.getAll(),
       ]);
 
-      final suggestion = results[0] as ({List<String> itemIds, String explanation});
+      final suggestion = results[0] as SuggestionResult;
       final allItems = results[1] as List<ClothingItem>;
 
       final matched = allItems.where((item) => suggestion.itemIds.contains(item.id)).toList();

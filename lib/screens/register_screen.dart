@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../repositories/auth_repository.dart';
 import '../app_theme.dart';
 import 'login_screen.dart';
 
@@ -28,7 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      final result = await ApiService.instance.register(
+      final result = await AuthRepository.instance.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
