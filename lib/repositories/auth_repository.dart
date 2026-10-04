@@ -16,9 +16,6 @@ abstract class AuthRepository {
   });
   Future<bool> isLoggedIn();
   Future<void> logout();
-  Future<UserInfo> getSavedUserInfo();
-  Future<ProfileUpdateResult> updateProfile({String? name, String? email});
-  Future<void> changePassword({required String currentPassword, required String newPassword});
 }
 
 class _AuthRepositoryImpl implements AuthRepository {
@@ -45,15 +42,4 @@ class _AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() => _api.clearToken();
-
-  @override
-  Future<UserInfo> getSavedUserInfo() => _api.getSavedUserInfo();
-
-  @override
-  Future<ProfileUpdateResult> updateProfile({String? name, String? email}) =>
-      _api.updateProfile(name: name, email: email);
-
-  @override
-  Future<void> changePassword({required String currentPassword, required String newPassword}) =>
-      _api.changePassword(currentPassword: currentPassword, newPassword: newPassword);
 }
