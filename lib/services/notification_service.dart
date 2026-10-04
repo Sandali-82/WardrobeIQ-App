@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -6,10 +7,17 @@ import 'package:timezone/data/latest.dart' as tzdata;
 /// Wraps flutter_local_notifications for the app's "wear this today"
 /// outfit reminders. Call [init] once in main() before runApp.
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _plugin =
+  static FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;
+
+  /// Replaces the notifications plugin so tests can verify the scheduling
+  /// logic without a real device.
+  @visibleForTesting
+  static void setPluginForTesting(FlutterLocalNotificationsPlugin plugin) {
+    _plugin = plugin;
+  }
 
   static Future<void> init() async {
     if (_initialized) return;

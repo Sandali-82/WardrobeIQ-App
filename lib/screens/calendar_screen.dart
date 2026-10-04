@@ -180,11 +180,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       )
                     : Padding(
                         padding: const EdgeInsets.all(20),
-                        child: _selectedLog != null
-                            ? _LoggedOutfitCard(
-                                log: _selectedLog!,
-                                selectedDay: _selectedDay,
-                                onRemove: () => _removeLog(_selectedLog!),
+                            child: _selectedLog != null
+                              ? SingleChildScrollView(
+                                child: _LoggedOutfitCard(
+                                  log: _selectedLog!,
+                                  selectedDay: _selectedDay,
+                                  onRemove: () => _removeLog(_selectedLog!),
+                                ),
                               )
                             : Center(
                                 child: Column(
