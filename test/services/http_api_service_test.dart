@@ -69,6 +69,12 @@ void main() {
   setUp(() {
     requests = [];
     SharedPreferences.setMockInitialValues({});
+    // The hook is static, so make sure no test leaks it into the next one.
+    HttpApiService.onSessionExpired = null;
+  });
+
+  tearDown(() {
+    HttpApiService.onSessionExpired = null;
   });
 
   // A service whose HTTP client records every request and answers with
@@ -345,6 +351,126 @@ void main() {
       await expectLater(service.getClothingItems(), throwsA(isA<Exception>()));
 
       expect(clients.single.closed, isTrue);
+    });
+  });
+
+  group('session expiry', () {
+    const expiredMessage = 'Your session has expired. Please log in again.';
+
+    test('a 401 without a message reports that the session expired', () async {
+      saveToken('old-token');
+      final service = serviceReturning((_) => http.Response('', 401));
+
+      await expectLater(service.getClothingItems(), throwsMessage(expiredMessage));
+    });
+
+    test('a 401 with an empty JSON object also counts as an expired session',
+        () async {
+      saveToken('old-token');
+      final service = serviceReturning((_) => jsonResponse({}, 401));
+
+      await expectLater(service.getOutfits(), throwsMessage(expiredMessage));
+    });
+
+    test('a 401 without a message clears the token and the cached user info',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'token': 'old-token',
+        'userName': 'Test User',
+        'userEmail': 'test@example.com',
+      });
+      final service = serviceReturning((_) => http.Response('', 401));
+
+      await expectLater(service.getClothingItems(), throwsMessage(expiredMessage));
+
+      expect(await service.isLoggedIn(), isFalse);
+      expect(await service.getSavedUserInfo(), (name: null, email: null));
+    });
+
+    test('a 401 without a message calls the session-expired callback', () async {
+      saveToken('old-token');
+      var callbackCount = 0;
+      HttpApiService.onSessionExpired = () => callbackCount++;
+      final service = serviceReturning((_) => http.Response('', 401));
+
+      await expectLater(service.getOutfits(), throwsMessage(expiredMessage));
+
+      expect(callbackCount, 1);
+    });
+
+    test('works for write requests as well', () async {
+      saveToken('old-token');
+      var callbackCount = 0;
+      HttpApiService.onSessionExpired = () => callbackCount++;
+      final service = serviceReturning((_) => http.Response('', 401));
+
+      await expectLater(
+        service.createOutfit(name: 'Casual Friday', itemIds: ['a']),
+        throwsMessage(expiredMessage),
+      );
+
+      expect(callbackCount, 1);
+      expect(await service.isLoggedIn(), isFalse);
+    });
+
+    test('a 401 without a message still throws when no callback is registered',
+        () async {
+      saveToken('old-token');
+      final service = serviceReturning((_) => http.Response('', 401));
+
+      await expectLater(service.getClothingItems(), throwsMessage(expiredMessage));
+    });
+
+    test('a 401 with a backend message is a normal error and keeps the token',
+        () async {
+      saveToken('valid-token');
+      var callbackCount = 0;
+      HttpApiService.onSessionExpired = () => callbackCount++;
+      final service = serviceReturning(
+          (_) => jsonResponse({'message': 'Current password is incorrect'}, 401));
+
+      await expectLater(
+        service.changePassword(currentPassword: 'wrong', newPassword: 'newpass1'),
+        throwsMessage('Current password is incorrect'),
+      );
+
+      expect(callbackCount, 0);
+      expect(await service.isLoggedIn(), isTrue);
+    });
+
+    test('a 403 without a message is not treated as an expired session', () async {
+      saveToken('valid-token');
+      var callbackCount = 0;
+      HttpApiService.onSessionExpired = () => callbackCount++;
+      final service = serviceReturning((_) => jsonResponse({}, 403));
+
+      await expectLater(service.getClothingItems(), throwsMessage('Request failed'));
+
+      expect(callbackCount, 0);
+      expect(await service.isLoggedIn(), isTrue);
+    });
+
+    test('a 500 without a message does not clear the session', () async {
+      saveToken('valid-token');
+      var callbackCount = 0;
+      HttpApiService.onSessionExpired = () => callbackCount++;
+      final service = serviceReturning((_) => jsonResponse({}, 500));
+
+      await expectLater(service.getClothingItems(), throwsMessage('Request failed'));
+
+      expect(callbackCount, 0);
+      expect(await service.isLoggedIn(), isTrue);
+    });
+
+    test('a successful request does not call the callback', () async {
+      saveToken('valid-token');
+      var callbackCount = 0;
+      HttpApiService.onSessionExpired = () => callbackCount++;
+      final service = serviceReturning((_) => jsonResponse([]));
+
+      await service.getClothingItems();
+
+      expect(callbackCount, 0);
     });
   });
 

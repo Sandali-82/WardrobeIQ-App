@@ -8,6 +8,12 @@ import '../models/outfit.dart';
 import '../models/worn_log.dart';
 import 'api_service.dart';
 
+/// Thrown internally when the server rejects the stored token
+/// (a 401 response that carries no message from the backend).
+class SessionExpiredException implements Exception {
+  const SessionExpiredException();
+}
+
 /// Real implementation of [ApiService] that talks to the backend over HTTP.
 /// The HTTP client is created through [clientFactory], so tests can inject
 /// a `MockClient` and exercise all the parsing / error-handling logic here
@@ -17,6 +23,10 @@ class HttpApiService implements ApiService {
       : _clientFactory = clientFactory ?? (() => http.Client());
 
   static const String baseUrl = 'https://wardrobeiq-api.onrender.com';
+
+  /// Called after the stored token has been rejected and cleared. main.dart
+  /// sets this to send the user back to the login screen. Null in tests.
+  static void Function()? onSessionExpired;
 
   final http.Client Function() _clientFactory;
 
@@ -102,6 +112,12 @@ class HttpApiService implements ApiService {
       throw Exception('Couldn\'t connect to the server. Check your connection and try again.');
     } on HttpException {
       throw Exception('Couldn\'t connect to the server. Check your connection and try again.');
+    } on SessionExpiredException {
+      // The stored token is no longer valid. Clear it so the next app start
+      // goes to the login screen instead of back into a broken session.
+      await clearToken();
+      onSessionExpired?.call();
+      throw Exception('Your session has expired. Please log in again.');
     } catch (e) {
       if (e is Exception) rethrow;
       throw Exception('Something went wrong. Please try again.');
@@ -119,8 +135,13 @@ class HttpApiService implements ApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return data;
     } else {
-      final message = data is Map ? (data['message'] ?? 'Request failed') : 'Request failed';
-      throw Exception(message);
+      final message = data is Map ? data['message'] : null;
+      // A 401 without a message means the stored token was rejected.
+      // (A wrong password also returns 401, but with a message from the backend.)
+      if (response.statusCode == 401 && message == null) {
+        throw const SessionExpiredException();
+      }
+      throw Exception(message ?? 'Request failed');
     }
   }
 

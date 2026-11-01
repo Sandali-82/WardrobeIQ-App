@@ -156,20 +156,28 @@ class _OutfitBuilderScreenState extends State<OutfitBuilderScreen> {
               ),
             ),
 
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton(
-              onPressed: _isSaving ? null : _saveOutfit,
-              child: _isSaving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.background,
-                      ),
-                    )
-                  : const Text('Save Outfit'),
+          // SafeArea keeps the button above the system navigation bar, and the
+          // SizedBox makes it span the full width.
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveOutfit,
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.background,
+                          ),
+                        )
+                      : const Text('Save Outfit'),
+                ),
+              ),
             ),
           ),
         ],
