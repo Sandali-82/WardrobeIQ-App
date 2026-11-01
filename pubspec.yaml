@@ -54,6 +54,29 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   mocktail: ^1.0.4
 
+  # Generates the launcher icon and the native splash screen from the
+  # images in assets/icon/. Both only run at build time.
+  flutter_launcher_icons: ^0.14.0
+  flutter_native_splash: ^2.4.0
+
+# Launcher icon configuration.
+# Run: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#1B0C13"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+
+# Native splash screen configuration.
+# Run: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#1A1418"
+  image: assets/icon/splash_logo.png
+  android_12:
+    color: "#1A1418"
+    image: assets/icon/splash_mark.png
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

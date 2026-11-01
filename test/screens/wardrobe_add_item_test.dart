@@ -20,6 +20,11 @@ void useTallScreen(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+// The add item sheet limits picked photos to this width (in pixels) and
+// compresses them with this JPEG quality before uploading.
+const int maxPhotoWidth = 1600;
+const photoQuality = 80;
+
 // A 1x1 PNG. The preview has an errorBuilder, so the tests do not depend on
 // the bytes decoding successfully.
 final photo = PickedPhoto(
@@ -59,10 +64,13 @@ void main() {
     when(() => repo.getAll()).thenAnswer((_) async => []);
   });
 
-  // The add item sheet asks for the original size and a quality of 80.
+  // The add item sheet asks for a maximum width and a quality of 80.
   void stubPick(PhotoSource source, PickedPhoto? result) {
-    when(() => picker.pick(source, maxWidth: null, imageQuality: 80))
-        .thenAnswer((_) async => result);
+    when(() => picker.pick(
+          source,
+          maxWidth: maxPhotoWidth,
+          imageQuality: photoQuality,
+        )).thenAnswer((_) async => result);
   }
 
   void stubAddSuccess() {
@@ -154,8 +162,25 @@ void main() {
     await tester.tap(find.text('Take a photo'));
     await tester.pumpAndSettle();
 
-    verify(() => picker.pick(PhotoSource.camera, maxWidth: null, imageQuality: 80))
-        .called(1);
+    verify(() => picker.pick(
+          PhotoSource.camera,
+          maxWidth: maxPhotoWidth,
+          imageQuality: photoQuality,
+        )).called(1);
+  });
+
+  testWidgets('limits the width of photos picked from the gallery',
+      (tester) async {
+    stubPick(PhotoSource.gallery, photo);
+    await openSheet(tester);
+
+    await pickFromGallery(tester);
+
+    verify(() => picker.pick(
+          PhotoSource.gallery,
+          maxWidth: 1600,
+          imageQuality: 80,
+        )).called(1);
   });
 
   testWidgets('keeps the placeholder when the user cancels the picker',

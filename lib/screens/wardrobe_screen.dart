@@ -56,6 +56,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     final added = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true, // keeps the sheet below the status bar
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -261,7 +262,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
     try {
       final picked = await PhotoPicker.instance.pick(
         source,
-        maxWidth: null, // keep the original size, only compress
+        maxWidth: 1600, // wardrobe photos do not need full camera resolution
         imageQuality: 80,
       );
       if (picked != null && mounted) {
@@ -345,110 +346,118 @@ class _AddItemSheetState extends State<_AddItemSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20, right: 20, top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Add Clothing Item', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
+    // SafeArea keeps the button above the system navigation bar, and the
+    // scroll view prevents overflow when the keyboard is open.
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Add Clothing Item', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 16),
 
-            GestureDetector(
-              onTap: _isPickingImage ? null : _showImageSourceOptions,
-              child: Container(
-                height: 160,
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.3)),
-                ),
-                child: _isPickingImage
-                    ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                    : _pickedPhoto != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.memory(
-                              _pickedPhoto!.bytes,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (_, _, _) => const Center(
-                                child: Icon(Icons.image_not_supported, color: AppColors.textSecondary),
+              GestureDetector(
+                onTap: _isPickingImage ? null : _showImageSourceOptions,
+                child: Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.3)),
+                  ),
+                  child: _isPickingImage
+                      ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                      : _pickedPhoto != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                _pickedPhoto!.bytes,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                cacheWidth: 800, // decode the preview at a smaller size
+                                errorBuilder: (_, _, _) => const Center(
+                                  child: Icon(Icons.image_not_supported, color: AppColors.textSecondary),
+                                ),
+                              ),
+                            )
+                          : const Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.add_a_photo, color: AppColors.textSecondary, size: 32),
+                                  SizedBox(height: 8),
+                                  Text('Tap to add a photo', style: TextStyle(color: AppColors.textSecondary)),
+                                ],
                               ),
                             ),
-                          )
-                        : const Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.add_a_photo, color: AppColors.textSecondary, size: 32),
-                                SizedBox(height: 8),
-                                Text('Tap to add a photo', style: TextStyle(color: AppColors.textSecondary)),
-                              ],
-                            ),
-                          ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-            ),
-            const SizedBox(height: 12),
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 12),
 
-            TextFormField(
-              controller: _colorController,
-              decoration: const InputDecoration(labelText: 'Color (e.g. white, black)'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Color is required' : null,
-            ),
-            const SizedBox(height: 12),
+              TextFormField(
+                controller: _colorController,
+                decoration: const InputDecoration(labelText: 'Color (e.g. white, black)'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Color is required' : null,
+              ),
+              const SizedBox(height: 12),
 
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Category'),
-              dropdownColor: AppColors.surface,
-              items: _categories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-              onChanged: (v) => setState(() => _category = v!),
-            ),
-            const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _category,
+                decoration: const InputDecoration(labelText: 'Category'),
+                dropdownColor: AppColors.surface,
+                items: _categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (v) => setState(() => _category = v!),
+              ),
+              const SizedBox(height: 12),
 
-            DropdownButtonFormField<String>(
-              initialValue: _season,
-              decoration: const InputDecoration(labelText: 'Season'),
-              dropdownColor: AppColors.surface,
-              items: _seasons
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                  .toList(),
-              onChanged: (v) => setState(() => _season = v!),
-            ),
-
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+              DropdownButtonFormField<String>(
+                initialValue: _season,
+                decoration: const InputDecoration(labelText: 'Season'),
+                dropdownColor: AppColors.surface,
+                items: _seasons
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) => setState(() => _season = v!),
               ),
 
-            const SizedBox(height: 20),
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                ),
 
-            ElevatedButton(
-              onPressed: _isSaving ? null : _submit,
-              child: _isSaving
-                  ? const SizedBox(
-                      height: 20, width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
-                    )
-                  : const Text('Add Item'),
-            ),
-          ],
+              const SizedBox(height: 20),
+
+              ElevatedButton(
+                onPressed: _isSaving ? null : _submit,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
+                      )
+                    : const Text('Add Item'),
+              ),
+            ],
+          ),
         ),
       ),
     );
